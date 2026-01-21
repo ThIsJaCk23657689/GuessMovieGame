@@ -1,6 +1,14 @@
 <script setup>
 import { computed, onMounted, nextTick, ref } from 'vue'
 
+const BASE_URL = import.meta.env.BASE_URL
+const audioUrl = computed(() => {
+	return BASE_URL + currentQuestion.value.audioSrc.replace(/^\//, '')
+})
+const posterUrl = computed(() => {
+	return BASE_URL + currentQuestion.value.posterSrc.replace(/^\//, '')
+})
+
 const categories = [
 	{ key: 'classic', name: '經典電影', blurb: '時代洗鍊的旋律，記憶中的銀幕片段。' },
 	{ key: 'horror', name: '恐怖驚悚片', blurb: '低頻壓迫與心跳共振，誰先破防？' },
@@ -255,7 +263,7 @@ function addAdminItem() {
 
 onMounted(async () => {
 	try {
-		const res = await fetch(`${import.meta.env.BASE_URL}games.json`)
+		const res = await fetch(new URL('/public/games.json', import.meta.url))
 		if (!res.ok) throw new Error('Failed to load games.json')
 		allGames.value = await res.json()
 	} catch (err) {
@@ -421,7 +429,7 @@ onMounted(async () => {
 
 					</div>
 				</div>
-				<audio ref="audioRef" :src="currentQuestion?.audioSrc"></audio>
+				<audio ref="audioRef" :src="audioUrl"></audio>
 
 				<div v-if="roundState === 'ended'"
 					class="mt-4 rounded-3xl border border-slate-800/70 bg-slate-900/60 p-8 text-center">
@@ -436,7 +444,7 @@ onMounted(async () => {
 						<div class="relative max-h-[90vh] max-w-4xl w-full mx-4 overflow-hidden rounded-3xl border border-amber-200/40 bg-slate-900 shadow-2xl">
 							<!-- 海報圖片 -->
 							<div class="flex items-center justify-center bg-slate-950 p-4">
-								<img :src="currentQuestion.posterSrc" alt="Movie Poster"
+								<img :src="posterUrl" alt="Movie Poster"
 									class="max-h-[60vh] w-auto object-contain rounded-xl shadow-lg" />
 							</div>
 
