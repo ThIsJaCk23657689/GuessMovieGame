@@ -22,9 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-*.mp3
-*.jpg
-*.jpeg
-*.png
-*.gif
