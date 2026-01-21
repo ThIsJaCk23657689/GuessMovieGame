@@ -16,18 +16,15 @@ const selectedCategory = ref(null)
 const roundQuestions = ref([])
 const currentIndex = ref(0)
 
-// 回合狀態：idle, playing, waiting, answering, revealing, ended
+// 回合狀態：idle, playing, answering, revealing, ended
 const roundState = ref('idle')
 const audioRef = ref(null)
 
-const playDuration = 10
-const roundDuration = 30
+const playDuration = 40
 const answerDuration = 5
 const timeLeft = ref(playDuration)
-const roundTimeLeft = ref(roundDuration)
 const answerTimeLeft = ref(answerDuration)
 let playTimer = null
-let roundTimer = null
 let answerTimer = null
 
 const teams = ref([
@@ -41,21 +38,17 @@ const teams = ref([
 const currentQuestion = computed(() => roundQuestions.value[currentIndex.value])
 
 const playProgress = computed(() => timeLeft.value / playDuration)
-const roundProgress = computed(() => roundTimeLeft.value / roundDuration)
 const answerProgress = computed(() => answerTimeLeft.value / answerDuration)
 
 const playDisplay = computed(() => Math.ceil(timeLeft.value))
-const roundDisplay = computed(() => Math.ceil(roundTimeLeft.value))
 const answerDisplay = computed(() => Math.ceil(answerTimeLeft.value))
 
-const isPlayHurry = computed(() => roundState.value === 'playing' && timeLeft.value <= 3)
+const isPlayHurry = computed(() => roundState.value === 'playing' && timeLeft.value <= 10)
 const isAnswerHurry = computed(() => roundState.value === 'answering' && answerTimeLeft.value <= 2)
-const isRoundHurry = computed(() => roundState.value === 'waiting' && roundTimeLeft.value <= 5)
 
 const circleRadius = 42
 const circleC = 2 * Math.PI * circleRadius
 const playDashOffset = computed(() => circleC * (1 - Math.max(0, Math.min(1, playProgress.value))))
-const roundDashOffset = computed(() => circleC * (1 - Math.max(0, Math.min(1, roundProgress.value))))
 const answerDashOffset = computed(() => circleC * (1 - Math.max(0, Math.min(1, answerProgress.value))))
 
 const TIMER_INTERVAL = 50
@@ -99,11 +92,6 @@ function resetPlayTimer() {
 	playTimer = null
 }
 
-function resetRoundTimer() {
-	if (roundTimer) clearInterval(roundTimer)
-	roundTimer = null
-}
-
 function resetAnswerTimer() {
 	if (answerTimer) clearInterval(answerTimer)
 	answerTimer = null
@@ -112,7 +100,6 @@ function resetAnswerTimer() {
 // 清除所有計時器
 function clearTimers() {
 	resetPlayTimer()
-	resetRoundTimer()
 	resetAnswerTimer()
 }
 
@@ -144,57 +131,39 @@ function setupRound() {
 	currentIndex.value = 0
 	roundState.value = 'idle'
 	timeLeft.value = playDuration
-	roundTimeLeft.value = roundDuration
 	answerTimeLeft.value = answerDuration
 }
 
-function startRoundTimer(duration) {
-	resetRoundTimer()
-	answerTimeLeft.value = answerDuration
-	roundTimeLeft.value = duration
-	const start = Date.now()
-	roundTimer = setInterval(() => {
-		const remaining = Math.max(0, duration - (Date.now() - start) / 1000)
-		roundTimeLeft.value = remaining
-		if (remaining <= 0) {
-			resetRoundTimer()
-			forceRevealAnswer()
-		}
-	}, TIMER_INTERVAL)
-}
-
-function pauseRoundTimer() {
-	resetRoundTimer()
+function pausePlayTimer() {
+	resetPlayTimer()
 }
 
 function forceRevealAnswer() {
-	revealAnswer()
+	revealAnswer(false)
 }
 
-async function startPlayback() {
+async function startPlayback( playoffset = 0 ) {
 	if (!currentQuestion.value) return
 
 	resetPlayTimer()
 	stopAudio()
 
 	roundState.value = 'playing'
-	timeLeft.value = playDuration
+	timeLeft.value = playDuration - playoffset
 
 	try {
 		await nextTick()
-		await playAudio()
+		await playAudio( playoffset )
 
 		const start = Date.now()
 
 		playTimer = setInterval(() => {
 			const elapsed = (Date.now() - start) / 1000
-			const remaining = Math.max(0, playDuration - elapsed)
+			const remaining = Math.max(0, (playDuration - playoffset) - elapsed)
 			timeLeft.value = remaining
 			if (remaining <= 0) {
 				resetPlayTimer()
-				stopAudio()
-				roundState.value = 'waiting'
-				startRoundTimer(roundDuration)
+				forceRevealAnswer()
 			}
 		}, TIMER_INTERVAL)
 	} catch (err) {
@@ -204,22 +173,23 @@ async function startPlayback() {
 }
 
 function answerButtonClicked() {
-	if (roundState.value === 'waiting' )
+	if (roundState.value === 'playing' )
 	{
 		// 進入搶答環節
 		resetAnswerTimer()
-		pauseRoundTimer()
+		pausePlayTimer()
+		stopAudio()
 		roundState.value = 'answering'
 		answerTimeLeft.value = answerDuration
 
 		const start = Date.now()
 		answerTimer = setInterval(() => {
-			const remaining = Math.max(0, 5 - (Date.now() - start) / 1000)
+			const remaining = Math.max(0, answerDuration - (Date.now() - start) / 1000)
 			answerTimeLeft.value = remaining
 			if (remaining <= 0) {
 				resetAnswerTimer()
-				roundState.value = 'waiting'
-				startRoundTimer(roundTimeLeft.value)
+				roundState.value = 'playing'
+				startPlayback(playDuration - timeLeft.value)
 			}
 		}, TIMER_INTERVAL)
 	}
@@ -227,17 +197,18 @@ function answerButtonClicked() {
 	{
 		// 答錯，回到等待狀態
 		resetAnswerTimer()
-		roundState.value = 'waiting'
-		startRoundTimer(roundTimeLeft.value)
+		roundState.value = 'playing'
+		startPlayback(playDuration - timeLeft.value)
 	}
 }
 
-function revealAnswer() {
+function revealAnswer(playAudioOnReveal = true) {
 	clearTimers()
 	roundState.value = 'revealing'
-	playAudio(10)
+	if (playAudioOnReveal) {
+		playAudio(playDuration - timeLeft.value)
+	}
 }
-
 function nextQuestion() {
 	clearTimers()
 	stopAudio()
@@ -245,7 +216,6 @@ function nextQuestion() {
 		currentIndex.value += 1
 		roundState.value = 'idle'
 		timeLeft.value = playDuration
-		roundTimeLeft.value = roundDuration
 		answerTimeLeft.value = answerDuration
 	} else {
 		roundState.value = 'ended'
@@ -300,7 +270,7 @@ onMounted(async () => {
 			<div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
 				<div>
 					<p class="text-xs uppercase tracking-[0.4em] text-amber-300/80">Movie Music Rush</p>
-					<h1 class="text-2xl font-bold text-amber-100">電影音樂搶答遊戲</h1>
+					<h1 class="text-2xl font-bold text-amber-100">影音先瘋</h1>
 				</div>
 				<div class="flex items-center gap-3 text-sm">
 					<button
@@ -322,7 +292,7 @@ onMounted(async () => {
 					<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
 						<h2 class="text-3xl font-semibold text-amber-100">選擇主題，讓節奏決勝負</h2>
 						<p class="mt-3 text-slate-300">
-							每回合從分類中抽出 5 題，播放 10 秒音樂後搶答。按鈴停止音樂，5 秒倒數作答。
+							每回合從分類中抽出 5 題，播放 40 秒音樂後搶答。
 						</p>
 						<p v-if="loadError" class="mt-3 text-sm text-rose-300">
 							{{ loadError }}
@@ -331,9 +301,9 @@ onMounted(async () => {
 					<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
 						<h3 class="text-lg font-semibold text-slate-100">快速規則</h3>
 						<ul class="mt-3 space-y-2 text-sm text-slate-300">
-							<li>開始播放後進入 10 秒搶答區間。</li>
-							<li>有人按鈴後暫停音樂，啟動 5 秒答題倒數。</li>
-							<li>顯示答案時彈出海報，分數由下方計分板調整。</li>
+							<li>每題開始會播放 40 秒 的音樂片段。</li>
+							<li>各組代表的猜賽者必須在 40 秒內進行按鈴搶答，最快按鈴者獲得發言權。</li>
+							<li>取得發言權後，必須在 5 秒內 說出正確電影名稱。</li>
 						</ul>
 					</div>
 				</div>
@@ -414,19 +384,6 @@ onMounted(async () => {
 									<svg class="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
 										<circle cx="50" cy="50" r="42" stroke="rgba(148,163,184,0.2)" stroke-width="8"
 											fill="none" />
-										<circle cx="50" cy="50" r="42" stroke="rgba(163,255,135,0.9)" stroke-width="8"
-											stroke-linecap="round" fill="none"
-											:style="{ strokeDasharray: circleC, strokeDashoffset: roundDashOffset }" />
-									</svg>
-									<div class="absolute inset-0 flex items-center justify-center text-2xl font-semibold"
-										:class="[isRoundHurry ? 'text-emerald-400 shake' : 'text-emerald-200']">
-										{{ roundDisplay }}
-									</div>
-								</div>
-								<div class="relative h-24 w-24">
-									<svg class="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
-										<circle cx="50" cy="50" r="42" stroke="rgba(148,163,184,0.2)" stroke-width="8"
-											fill="none" />
 										<circle cx="50" cy="50" r="42" stroke="rgba(248,113,113,0.9)" stroke-width="8"
 											stroke-linecap="round" fill="none"
 											:style="{ strokeDasharray: circleC, strokeDashoffset: answerDashOffset }" />
@@ -442,17 +399,17 @@ onMounted(async () => {
 						<div class="mt-6 flex flex-wrap gap-3">
 							<button
 								class="rounded-full bg-amber-400 px-6 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-600"
-								:disabled="roundState !== 'idle'" @click="startPlayback">
+								:disabled="roundState !== 'idle'" @click="startPlayback(0)">
 								開始播放
 							</button>
 							<button
 								class="rounded-full border border-fuchsia-300/60 px-6 py-2 text-sm font-semibold text-fuchsia-100 hover:bg-fuchsia-500/20 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-900 disabled:border-none"
-								:disabled="roundState !== 'waiting' && roundState !== 'answering'" @click="answerButtonClicked">
+								:disabled="roundState !== 'playing' && roundState !== 'answering'" @click="answerButtonClicked">
 								{{ roundState === 'answering' ? '答錯！' : '搶答' }}
 							</button>
 							<button
 								class="rounded-full border border-rose-300/60 px-6 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-900 disabled:border-none"
-								:disabled="roundState !== 'answering'" @click="revealAnswer">
+								:disabled="roundState !== 'answering'" @click="revealAnswer(true)">
 								顯示答案
 							</button>
 							<button
