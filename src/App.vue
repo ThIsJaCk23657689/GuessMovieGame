@@ -135,7 +135,7 @@ function setupRound() {
 	clearTimers()
 	stopAudio()
 	const pool = allGames.value.filter((game) => game.category === selectedCategory.value.name)
-	roundQuestions.value = shuffle(pool).slice(0, 5)
+	roundQuestions.value = pool.slice(0, 5)
 	currentIndex.value = 0
 	roundState.value = 'idle'
 	timeLeft.value = playDuration
@@ -285,10 +285,6 @@ onMounted(async () => {
 						class="rounded-full border border-amber-200/40 px-4 py-2 text-amber-100 hover:bg-amber-200/10"
 						@click="view = 'home'">
 						首頁
-					</button>
-					<button class="rounded-full border border-slate-700 px-4 py-2 text-slate-200 hover:bg-slate-800"
-						@click="view = 'admin'">
-						後台管理
 					</button>
 				</div>
 			</div>
