@@ -43,6 +43,14 @@ const teams = ref([
 	{ id: 4, name: 'GraphicsTeam', score: 0, chip: 'from-amber-400 to-yellow-600' },
 	{ id: 5, name: '中醫吃飯糰', score: 0, chip: 'from-slate-300 to-slate-500' },
 ])
+const rankedTeams = computed(() =>
+	[...teams.value]
+		.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+		.map((team, index) => ({
+			...team,
+			rank: index + 1,
+		}))
+)
 
 const currentQuestion = computed(() => roundQuestions.value[currentIndex.value])
 
@@ -541,29 +549,54 @@ onMounted(async () => {
 		</main>
 
 		<footer class="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800/70 bg-slate-950/90 backdrop-blur">
-			<div class="mx-auto flex max-w-6xl flex-wrap gap-3 px-6 py-4">
-				<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Scoreboard</div>
-				<div class="flex flex-1 flex-wrap gap-3">
-					<div v-for="team in teams" :key="team.id"
-						class="flex items-center gap-3 rounded-2xl border border-slate-800/70 bg-slate-900/70 px-4 py-2 text-sm text-slate-100">
-						<div class="flex items-center gap-2">
-							<span class="h-2 w-2 rounded-full bg-gradient-to-r" :class="team.chip"></span>
-							<button class="font-semibold text-slate-100 hover:text-amber-200">
-								{{ team.name }}
-							</button>
+			<div class="mx-auto flex max-w-6xl flex-wrap items-stretch gap-4 px-6 py-4">
+				<div class="flex min-w-[220px] flex-1 flex-col gap-3 rounded-3xl border border-slate-800/70 bg-slate-900/70 p-4">
+					<div class="flex items-center justify-between">
+						<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Leaderboard</div>
+						<div class="text-[10px] text-slate-500">Top 3</div>
+					</div>
+					<transition-group name="rank-slide" tag="div" class="space-y-2">
+						<div v-for="team in rankedTeams.slice(0, 3)" :key="team.id"
+							class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/60 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 rank-card"
+							:class="{
+								'rank-gold': team.rank === 1,
+								'rank-silver': team.rank === 2,
+								'rank-bronze': team.rank === 3,
+							}">
+							<div class="flex min-w-0 items-center gap-2">
+								<span class="rank-medal">{{ team.rank }}</span>
+								<span class="h-2 w-2 rounded-full bg-gradient-to-r" :class="team.chip"></span>
+								<span class="min-w-0 truncate font-semibold">{{ team.name }}</span>
+							</div>
+							<span class="text-lg font-semibold text-amber-100">{{ team.score }}</span>
 						</div>
-						<div class="text-lg font-semibold text-amber-100">{{ team.score }}</div>
-						<div class="flex gap-2">
-							<button
-								class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
-								@click="adjustScore(team, -1)">
-								-1
-							</button>
-							<button
-								class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
-								@click="adjustScore(team, 1)">
-								+1
-							</button>
+					</transition-group>
+				</div>
+
+				<div class="flex min-w-[320px] flex-[2] flex-col gap-3">
+					<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Scoreboard</div>
+					<div class="flex flex-wrap gap-3">
+						<div v-for="team in teams" :key="team.id"
+							class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-800/70 bg-slate-900/70 px-4 py-2 text-sm text-slate-100">
+							<div class="flex min-w-0 items-center gap-2">
+								<span class="h-2 w-2 rounded-full bg-gradient-to-r" :class="team.chip"></span>
+								<button class="min-w-0 max-w-[10rem] truncate font-semibold text-slate-100 hover:text-amber-200">
+									{{ team.name }}
+								</button>
+							</div>
+							<div class="text-lg font-semibold text-amber-100 whitespace-nowrap">{{ team.score }}</div>
+							<div class="flex flex-none gap-2">
+								<button
+									class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
+									@click="adjustScore(team, -1)">
+									-1
+								</button>
+								<button
+									class="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
+									@click="adjustScore(team, 1)">
+									+1
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -612,5 +645,68 @@ onMounted(async () => {
 		transform: scale(0.9);
 		opacity: 0;
 	}
+}
+
+.rank-slide-enter-active,
+.rank-slide-leave-active {
+	transition: transform 0.35s ease, opacity 0.35s ease;
+}
+
+.rank-slide-enter-from {
+	transform: translateY(12px);
+	opacity: 0;
+}
+
+.rank-slide-leave-to {
+	transform: translateY(-12px);
+	opacity: 0;
+}
+
+.rank-slide-move {
+	transition: transform 0.35s ease;
+}
+
+.rank-card {
+	position: relative;
+	overflow: hidden;
+}
+
+.rank-card::after {
+	content: '';
+	position: absolute;
+	inset: -40% 0 auto;
+	height: 120%;
+	transform: rotate(-12deg);
+	opacity: 0.2;
+	background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+}
+
+.rank-medal {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	color: #0f172a;
+	background: radial-gradient(circle at 30% 30%, #fff7c7, #facc15 55%, #b45309 100%);
+	box-shadow: 0 0 10px rgba(250, 204, 21, 0.45);
+}
+
+.rank-gold {
+	border-color: rgba(250, 204, 21, 0.5);
+	box-shadow: 0 0 18px rgba(250, 204, 21, 0.12);
+}
+
+.rank-silver {
+	border-color: rgba(226, 232, 240, 0.5);
+	box-shadow: 0 0 16px rgba(226, 232, 240, 0.12);
+}
+
+.rank-bronze {
+	border-color: rgba(251, 146, 60, 0.5);
+	box-shadow: 0 0 14px rgba(251, 146, 60, 0.12);
 }
 </style>
