@@ -299,45 +299,76 @@ onMounted(async () => {
 			</div>
 		</header>
 
-		<main class="mx-auto max-w-6xl px-6 pb-36 pt-10">
-			<section v-if="view === 'home'">
-				<div class="mb-10 grid gap-6 text-left md:grid-cols-2">
-					<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
-						<h2 class="text-3xl font-semibold text-amber-100">選擇主題，讓節奏決勝負</h2>
-						<p class="mt-3 text-slate-300">
-							每回合從分類中抽出 5 題，播放 40 秒音樂後搶答。
-						</p>
-						<p v-if="loadError" class="mt-3 text-sm text-rose-300">
-							{{ loadError }}
-						</p>
+		<main class="mx-auto flex max-w-7xl flex-col gap-6 px-6 pb-36 pt-10 lg:flex-row">
+			<aside class="flex w-full flex-col gap-4 lg:w-2/5">
+				<div class="rounded-3xl border border-slate-800/70 bg-slate-900/70 p-5">
+					<div class="flex items-center justify-between">
+						<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Leaderboard</div>
+						<div class="text-[10px] text-slate-500">Live Rank</div>
 					</div>
-					<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
-						<h3 class="text-lg font-semibold text-slate-100">快速規則</h3>
-						<ul class="mt-3 space-y-2 text-sm text-slate-300">
-							<li>每題開始會播放 40 秒 的音樂片段。</li>
-							<li>各組代表的猜賽者必須在 40 秒內進行按鈴搶答，最快按鈴者獲得發言權。</li>
-							<li>取得發言權後，必須在 5 秒內 說出正確電影名稱。</li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-					<button v-for="category in categories" :key="category.key"
-						class="group rounded-[28px] border border-slate-800/70 bg-gradient-to-br from-slate-900/80 via-slate-900/30 to-slate-950 p-6 text-left transition hover:-translate-y-1 hover:border-amber-200/60"
-						@click="selectCategory(category)">
-						<div class="flex items-center justify-between">
-							<h3 class="text-2xl font-semibold text-amber-100">{{ category.name }}</h3>
-							<span class="text-xs uppercase tracking-[0.3em] text-slate-500 group-hover:text-amber-300">
-								Theme
-							</span>
+					<transition-group name="rank-slide" tag="div" class="mt-4 space-y-3">
+						<div v-for="team in rankedTeams" :key="team.id"
+							class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 rank-card"
+							:class="{
+								'rank-gold': team.rank === 1,
+								'rank-silver': team.rank === 2,
+								'rank-bronze': team.rank === 3,
+							}">
+							<div class="flex min-w-0 items-center gap-3">
+								<span class="rank-medal" :class="{ 'rank-medal-muted': team.rank > 3 }">
+									{{ team.rank }}
+								</span>
+								<span class="h-2 w-2 rounded-full bg-gradient-to-r" :class="team.chip"></span>
+								<span class="min-w-0 truncate font-semibold">{{ team.name }}</span>
+							</div>
+							<span class="text-lg font-semibold text-amber-100">{{ team.score }}</span>
 						</div>
-						<p class="mt-4 text-sm text-slate-300">{{ category.blurb }}</p>
-						<div class="mt-6 text-sm text-amber-200/80">進入搶答 →</div>
-					</button>
+					</transition-group>
 				</div>
-			</section>
+				<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-5 text-xs text-slate-400">
+					排行榜固定顯示於左側，比分變動會即時重新排序。
+				</div>
+			</aside>
 
-			<section v-else-if="view === 'game'">
+			<div class="flex w-full flex-1 flex-col lg:w-3/5">
+				<section v-if="view === 'home'">
+					<div class="mb-10 grid gap-6 text-left md:grid-cols-2">
+						<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
+							<h2 class="text-3xl font-semibold text-amber-100">選擇主題，讓節奏決勝負</h2>
+							<p class="mt-3 text-slate-300">
+								每回合從分類中抽出 5 題，播放 40 秒音樂後搶答。
+							</p>
+							<p v-if="loadError" class="mt-3 text-sm text-rose-300">
+								{{ loadError }}
+							</p>
+						</div>
+						<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
+							<h3 class="text-lg font-semibold text-slate-100">快速規則</h3>
+							<ul class="mt-3 space-y-2 text-sm text-slate-300">
+								<li>每題開始會播放 40 秒 的音樂片段。</li>
+								<li>各組代表的猜賽者必須在 40 秒內進行按鈴搶答，最快按鈴者獲得發言權。</li>
+								<li>取得發言權後，必須在 5 秒內 說出正確電影名稱。</li>
+							</ul>
+						</div>
+					</div>
+
+					<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+						<button v-for="category in categories" :key="category.key"
+							class="group rounded-[28px] border border-slate-800/70 bg-gradient-to-br from-slate-900/80 via-slate-900/30 to-slate-950 p-6 text-left transition hover:-translate-y-1 hover:border-amber-200/60"
+							@click="selectCategory(category)">
+							<div class="flex items-center justify-between">
+								<h3 class="text-2xl font-semibold text-amber-100">{{ category.name }}</h3>
+								<span class="text-xs uppercase tracking-[0.3em] text-slate-500 group-hover:text-amber-300">
+									Theme
+								</span>
+							</div>
+							<p class="mt-4 text-sm text-slate-300">{{ category.blurb }}</p>
+							<div class="mt-6 text-sm text-amber-200/80">進入搶答 →</div>
+						</button>
+					</div>
+				</section>
+
+				<section v-else-if="view === 'game'">
 				<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
 					<div>
 						<p class="text-xs uppercase tracking-[0.4em] text-amber-300/70">Round</p>
@@ -487,9 +518,9 @@ onMounted(async () => {
 						</div>
 					</div>
 				</transition>
-			</section>
+				</section>
 
-			<section v-else-if="view === 'admin'">
+				<section v-else-if="view === 'admin'">
 				<div class="mb-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
 					<div class="rounded-3xl border border-slate-800/70 bg-slate-900/60 p-6">
 						<h2 class="text-2xl font-semibold text-amber-100">後台管理</h2>
@@ -545,35 +576,13 @@ onMounted(async () => {
 						</div>
 					</div>
 				</div>
-			</section>
+				</section>
+			</div>
 		</main>
 
 		<footer class="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800/70 bg-slate-950/90 backdrop-blur">
-			<div class="mx-auto flex max-w-6xl flex-wrap items-stretch gap-4 px-6 py-4">
-				<div class="flex min-w-[220px] flex-1 flex-col gap-3 rounded-3xl border border-slate-800/70 bg-slate-900/70 p-4">
-					<div class="flex items-center justify-between">
-						<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Leaderboard</div>
-						<div class="text-[10px] text-slate-500">Top 3</div>
-					</div>
-					<transition-group name="rank-slide" tag="div" class="space-y-2">
-						<div v-for="team in rankedTeams.slice(0, 3)" :key="team.id"
-							class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/60 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 rank-card"
-							:class="{
-								'rank-gold': team.rank === 1,
-								'rank-silver': team.rank === 2,
-								'rank-bronze': team.rank === 3,
-							}">
-							<div class="flex min-w-0 items-center gap-2">
-								<span class="rank-medal">{{ team.rank }}</span>
-								<span class="h-2 w-2 rounded-full bg-gradient-to-r" :class="team.chip"></span>
-								<span class="min-w-0 truncate font-semibold">{{ team.name }}</span>
-							</div>
-							<span class="text-lg font-semibold text-amber-100">{{ team.score }}</span>
-						</div>
-					</transition-group>
-				</div>
-
-				<div class="flex min-w-[320px] flex-[2] flex-col gap-3">
+			<div class="mx-auto flex max-w-7xl flex-wrap items-stretch gap-4 px-6 py-4">
+				<div class="flex w-full flex-col gap-3">
 					<div class="text-xs uppercase tracking-[0.4em] text-slate-500">Scoreboard</div>
 					<div class="flex flex-wrap gap-3">
 						<div v-for="team in teams" :key="team.id"
@@ -693,6 +702,12 @@ onMounted(async () => {
 	color: #0f172a;
 	background: radial-gradient(circle at 30% 30%, #fff7c7, #facc15 55%, #b45309 100%);
 	box-shadow: 0 0 10px rgba(250, 204, 21, 0.45);
+}
+
+.rank-medal-muted {
+	color: #0f172a;
+	background: radial-gradient(circle at 30% 30%, #f1f5f9, #94a3b8 55%, #475569 100%);
+	box-shadow: none;
 }
 
 .rank-gold {
