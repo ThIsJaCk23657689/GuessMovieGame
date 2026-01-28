@@ -36,11 +36,11 @@ let playTimer = null
 let answerTimer = null
 
 const teams = ref([
-	{ id: 1, name: '紅隊', score: 0, chip: 'from-rose-500 to-red-700' },
-	{ id: 2, name: '藍隊', score: 0, chip: 'from-sky-500 to-blue-700' },
-	{ id: 3, name: '綠隊', score: 0, chip: 'from-emerald-500 to-green-700' },
-	{ id: 4, name: '金隊', score: 0, chip: 'from-amber-400 to-yellow-600' },
-	{ id: 5, name: '銀隊', score: 0, chip: 'from-slate-300 to-slate-500' },
+	{ id: 1, name: '預約頭獎隊', score: 0, chip: 'from-rose-500 to-red-700' },
+	{ id: 2, name: 'CPMs', score: 0, chip: 'from-sky-500 to-blue-700' },
+	{ id: 3, name: '大師就在我們隊', score: 0, chip: 'from-emerald-500 to-green-700' },
+	{ id: 4, name: 'GraphicsTeam', score: 0, chip: 'from-amber-400 to-yellow-600' },
+	{ id: 5, name: '中醫吃飯糰', score: 0, chip: 'from-slate-300 to-slate-500' },
 ])
 
 const currentQuestion = computed(() => roundQuestions.value[currentIndex.value])
